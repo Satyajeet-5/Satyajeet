@@ -3,99 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebRTC Video Call</title>
+    <title>Flask WebSocket Broadcast</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
+    <script>
+        let socket;
+
+        function connectWebSocket() {
+            socket = io.connect();
+
+            socket.on("connect", function() {
+                console.log("Connected to WebSocket server");
+            });
+
+            socket.on("message", function(data) {
+                let msgList = document.getElementById("messages");
+                let li = document.createElement("li");
+                li.textContent = data;
+                msgList.appendChild(li);
+            });
+        }
+
+        function sendMessage() {
+            let message = document.getElementById("message").value;
+            socket.send(message);
+            document.getElementById("message").value = "";  // Clear input after sending
+        }
+    </script>
 </head>
 <body>
-    <h2>WebRTC Video Call</h2>
-    <video id="localVideo" autoplay playsinline></video>
-    <video id="remoteVideo" autoplay playsinline></video>
-    <button id="startCall">Start Call</button>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.0/socket.io.js"></script>
-    <script>
-        const socket = io();
-        const localVideo = document.getElementById('localVideo');
-        const remoteVideo = document.getElementById('remoteVideo');
-        let localStream;
-        let peerConnection;
-        const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-
-        // ✅ 1. Get User Media (Ensure Local Video is Available)
-        async function startLocalStream() {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                localVideo.srcObject = localStream;
-            } catch (error) {
-                console.error("Error accessing media devices.", error);
-            }
-        }
-
-        // ✅ 2. Start Call (User A creates an offer)
-        async function startCall() {
-            await startLocalStream(); // Ensure local video starts
-            peerConnection = new RTCPeerConnection(config);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) socket.emit('ice-candidate', event.candidate);
-            };
-
-            peerConnection.ontrack = event => {
-                console.log("Received remote video track");
-                remoteVideo.srcObject = event.streams[0];
-            };
-
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-            socket.emit('offer', offer);
-        }
-
-        // ✅ 3. When User B Receives an Offer
-        socket.on('offer', async offer => {
-            await startLocalStream(); // Ensure local video starts
-
-            if (!peerConnection) {
-                peerConnection = new RTCPeerConnection(config);
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-                peerConnection.onicecandidate = event => {
-                    if (event.candidate) socket.emit('ice-candidate', event.candidate);
-                };
-
-                peerConnection.ontrack = event => {
-                    console.log("Received remote video track");
-                    remoteVideo.srcObject = event.streams[0];
-                };
-
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-                const answer = await peerConnection.createAnswer();
-                await peerConnection.setLocalDescription(answer);
-                socket.emit('answer', answer);
-            }
-        });
-
-        // ✅ 4. When User A Receives an Answer
-        socket.on('answer', answer => {
-            if (peerConnection) {
-                peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-            }
-        });
-
-        // ✅ 5. ICE Candidate Exchange
-        peerConnection?.onicecandidate = event => {
-            if (event.candidate) {
-                socket.emit('ice-candidate', event.candidate);
-            }
-        };
-
-        socket.on('ice-candidate', candidate => {
-            if (candidate && peerConnection) {
-                peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-            }
-        });
-
-        document.getElementById('startCall').addEventListener('click', startCall);
-        startLocalStream(); // Start local video immediately
-    </script>
+    <h2>Flask WebSocket Broadcast</h2>
+    <button onclick="connectWebSocket()">Connect</button>
+    <input type="text" id="message" placeholder="Enter message">
+    <button onclick="sendMessage()">Send</button>
+    <ul id="messages"></ul>
 </body>
 </html>
