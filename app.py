@@ -1,24 +1,18 @@
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, send
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*")  # Enable WebSockets
 
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")  # Serve the HTML page
 
-@socketio.on('offer')
-def handle_offer(data):
-    emit('offer', data, broadcast=True)
+# Handle WebSocket messages
+@socketio.on("message")
+def handle_message(msg):
+    print(f"Message received: {msg}")
+    send(f"Broadcast: {msg}", broadcast=True)  # Send message to all clients
 
-@socketio.on('answer')
-def handle_answer(data):
-    emit('answer', data, broadcast=True)
-
-@socketio.on('ice-candidate')
-def handle_ice_candidate(data):
-    emit('ice-candidate', data, broadcast=True)
-
-if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=10000)
+if __name__ == "__main__":
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
