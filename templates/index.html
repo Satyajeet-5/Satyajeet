@@ -9,7 +9,7 @@
         let socket;
 
         function connectWebSocket() {
-            socket = io.connect();
+            socket = io.connect("https://satyajeet.onrender.com");
 
             socket.on("connect", function() {
                 alert("Connected to WebSocket server");
